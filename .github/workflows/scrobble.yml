@@ -27,4 +27,5 @@ jobs:
           LASTFM_USERNAME: ${{ secrets.LASTFM_USERNAME }}
           LASTFM_PASSWORD: ${{ secrets.LASTFM_PASSWORD }}
           BROWSER_JSON: ${{ secrets.BROWSER_JSON }}
+          IMPORT_ALL_HISTORY: "1"
         run: uv run scrobble_daily.py
