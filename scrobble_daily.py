@@ -210,6 +210,8 @@ def main():
     import_all = os.getenv("IMPORT_ALL_HISTORY", "0") == "1"
 
     browser_headers = parse_browser_headers(browser_json_raw or "")
+    browser_headers.pop("Content-Encoding", None)
+    browser_headers.pop("content-encoding", None)
     browser_headers.setdefault("x-youtube-bootstrap-logged-in", "true")
     browser_headers.setdefault("referer", "https://music.youtube.com/")
     browser_headers.setdefault("x-origin", "https://music.youtube.com")
