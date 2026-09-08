@@ -1,6 +1,9 @@
 name: Daily Scrobble
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: "38 5 * * *"
       timezone: "America/New_York"
