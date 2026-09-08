@@ -8,6 +8,15 @@ import ytmusicapi
 from ytmusicapi.parsers.playlists import parse_playlist_items
 
 
+class BrowserSessionYTMusic(ytmusicapi.YTMusic):
+    @property
+    def headers(self):
+        # Keep the fresh Authorization header copied from the browser.
+        # Recent YouTube sessions use a newer signed header format than
+        # ytmusicapi 1.12.1 regenerates internally.
+        return self.base_headers
+
+
 API_KEY = os.getenv("LASTFM_API_KEY")
 API_SECRET = os.getenv("LASTFM_API_SECRET")
 username = os.getenv("LASTFM_USERNAME")
@@ -189,7 +198,7 @@ def main():
         with open(browser_json_path, "w") as f:
             json.dump(browser_headers, f)
 
-        ytmusic = ytmusicapi.YTMusic(browser_json_path, language="en")
+        ytmusic = BrowserSessionYTMusic(browser_json_path, language="en")
         candidate_history = get_history_safe(ytmusic)
         print(f"Auth user {candidate}: {len(candidate_history)} history tracks")
 
