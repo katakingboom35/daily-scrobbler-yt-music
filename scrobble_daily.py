@@ -97,6 +97,30 @@ def get_history_safe(ytmusic):
         for key, count in renderer_counts.most_common(25):
             print(f"  {key}: {count}")
 
+        messages = []
+
+        def collect_messages(obj):
+            if isinstance(obj, dict):
+                renderer = obj.get("messageRenderer")
+                if renderer:
+                    for field in ("text", "subtext"):
+                        value = renderer.get(field)
+                        if isinstance(value, dict):
+                            if "simpleText" in value:
+                                messages.append(value["simpleText"])
+                            elif "runs" in value:
+                                messages.append("".join(run.get("text", "") for run in value["runs"]))
+                for value in obj.values():
+                    collect_messages(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    collect_messages(value)
+
+        collect_messages(response)
+        for message in messages:
+            if message:
+                print(f"History API message: {message[:250]}")
+
     return songs
 
 
