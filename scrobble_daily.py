@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from collections import Counter
 
@@ -169,12 +170,46 @@ def scrobble_tracks(network, tracks):
     print(f"Scrobbled {len(tracks)} tracks to Last.fm")
 
 
+def parse_browser_headers(raw: str) -> dict:
+    raw = (raw or "").strip()
+
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    headers = {}
+
+    for name, value in re.findall(r'"([^"]+)"\s*=\s*"([^"]*)"', raw):
+        headers[name] = value
+
+    cookie_pairs = re.findall(
+        r'System\.Net\.Cookie\("([^"]+)",\s*"([^"]*)",\s*"/",\s*"music\.youtube\.com"\)',
+        raw,
+    )
+    if cookie_pairs:
+        headers["Cookie"] = "; ".join(f"{name}={value}" for name, value in cookie_pairs)
+
+    user_agent = re.search(r'-UserAgent\s+"([^"]+)"', raw)
+    if user_agent:
+        headers["User-Agent"] = user_agent.group(1)
+
+    if not headers.get("Authorization") or not headers.get("Cookie"):
+        raise ValueError(
+            "BROWSER_JSON must be JSON or the full Firefox 'Copy as PowerShell' request"
+        )
+
+    return headers
+
+
 def main():
     browser_json_path = "browser.json"
     browser_json_raw = os.getenv("BROWSER_JSON")
     import_all = os.getenv("IMPORT_ALL_HISTORY", "0") == "1"
 
-    browser_headers = json.loads(browser_json_raw or "{}")
+    browser_headers = parse_browser_headers(browser_json_raw or "")
     browser_headers.setdefault("x-youtube-bootstrap-logged-in", "true")
     browser_headers.setdefault("referer", "https://music.youtube.com/")
     browser_headers.setdefault("x-origin", "https://music.youtube.com")
