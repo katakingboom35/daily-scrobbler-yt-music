@@ -173,7 +173,33 @@ def main():
     with open(browser_json_path, "w") as f:
         json.dump(browser_headers, f)
 
-    ytmusic = ytmusicapi.YTMusic(browser_json_path, language="en")
+    auth_candidates = []
+    configured_authuser = str(browser_headers.get("X-Goog-AuthUser", browser_headers.get("x-goog-authuser", "0")))
+    for candidate in [configured_authuser, "0", "1", "2", "3"]:
+        if candidate not in auth_candidates:
+            auth_candidates.append(candidate)
+
+    history = []
+    selected_authuser = None
+
+    for candidate in auth_candidates:
+        browser_headers["X-Goog-AuthUser"] = candidate
+        browser_headers["x-goog-authuser"] = candidate
+
+        with open(browser_json_path, "w") as f:
+            json.dump(browser_headers, f)
+
+        ytmusic = ytmusicapi.YTMusic(browser_json_path, language="en")
+        candidate_history = get_history_safe(ytmusic)
+        print(f"Auth user {candidate}: {len(candidate_history)} history tracks")
+
+        if candidate_history:
+            history = candidate_history
+            selected_authuser = candidate
+            break
+
+    if selected_authuser is not None:
+        print(f"Using X-Goog-AuthUser={selected_authuser}")
 
     lastfm = pylast.LastFMNetwork(
         api_key=API_KEY,
@@ -182,7 +208,6 @@ def main():
         password_hash=password_hash,
     )
 
-    history = get_history_safe(ytmusic)
     print(f"Total parsed YouTube Music history tracks: {len(history)}")
 
     scrobbles = build_scrobbles(history, import_all=import_all)
