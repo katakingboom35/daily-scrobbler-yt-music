@@ -12,18 +12,22 @@ username = os.getenv("LASTFM_USERNAME")
 password_hash = pylast.md5(os.getenv("LASTFM_PASSWORD"))
 
 
-def to_scrobble(entry: dict) -> dict:
+def to_scrobble(entry: dict, timestamp: int) -> dict | None:
+    title = entry.get("title")
     artists_data = entry.get("artists") or []
     artists = ", ".join(a.get("name", "") for a in artists_data if a.get("name"))
-    primary_artist = artists_data[0].get("name", "") if artists_data else artists
 
+    if not title or not artists:
+        return None
+
+    primary_artist = artists_data[0].get("name", "") if artists_data else artists
     album = (entry.get("album") or {}).get("name", "")
     duration_seconds = entry.get("duration_seconds", 180)
 
     return {
         "artist": artists,
-        "title": entry["title"],
-        "timestamp": int(time.time()),
+        "title": title,
+        "timestamp": timestamp,
         "album": album,
         "duration": duration_seconds,
         "album_artist": primary_artist,
@@ -76,6 +80,32 @@ def get_history_safe(ytmusic):
     return songs
 
 
+def build_scrobbles(history, import_all=False):
+    if import_all:
+        selected = history
+        print(f"One-time import mode: {len(selected)} history tracks found")
+    else:
+        selected = [
+            entry for entry in history
+            if entry.get("played") == "Yesterday"
+        ]
+        print(f"Daily mode: {len(selected)} tracks marked Yesterday")
+
+    # Last.fm requires timestamps. YouTube Music history does not expose exact
+    # play times here, so preserve the visible history order with unique,
+    # synthetic recent timestamps (4 minutes apart).
+    now = int(time.time())
+    scrobbles = []
+
+    for index, entry in enumerate(selected):
+        timestamp = now - ((index + 1) * 240)
+        scrobble = to_scrobble(entry, timestamp)
+        if scrobble:
+            scrobbles.append(scrobble)
+
+    return scrobbles
+
+
 def scrobble_tracks(network, tracks):
     if not tracks:
         print("0 tracks to scrobble")
@@ -88,6 +118,7 @@ def scrobble_tracks(network, tracks):
 def main():
     browser_json_path = "browser.json"
     browser_json_raw = os.getenv("BROWSER_JSON")
+    import_all = os.getenv("IMPORT_ALL_HISTORY", "0") == "1"
 
     with open(browser_json_path, "w") as f:
         f.write(browser_json_raw or "{}")
@@ -102,14 +133,9 @@ def main():
     )
 
     history = get_history_safe(ytmusic)
+    print(f"Total parsed YouTube Music history tracks: {len(history)}")
 
-    history = [
-        entry for entry in history
-        if entry.get("played") == "Yesterday"
-    ]
-
-    scrobbles = [to_scrobble(entry) for entry in history]
-
+    scrobbles = build_scrobbles(history, import_all=import_all)
     print(f"{len(scrobbles)} tracks to scrobble")
     scrobble_tracks(lastfm, scrobbles)
 
