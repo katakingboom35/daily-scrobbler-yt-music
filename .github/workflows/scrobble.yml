@@ -1,12 +1,8 @@
 name: Daily Scrobble
 
 on:
-  push:
-    branches:
-      - main
   schedule:
-    - cron: "38 5 * * *"
-      timezone: "America/New_York"
+    - cron: "30 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -27,5 +23,5 @@ jobs:
           LASTFM_USERNAME: ${{ secrets.LASTFM_USERNAME }}
           LASTFM_PASSWORD: ${{ secrets.LASTFM_PASSWORD }}
           BROWSER_JSON: ${{ secrets.BROWSER_JSON }}
-          IMPORT_ALL_HISTORY: "1"
+          IMPORT_ALL_HISTORY: "0"
         run: uv run scrobble_daily.py
