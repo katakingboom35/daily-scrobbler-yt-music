@@ -47,10 +47,30 @@ def to_scrobble(entry: dict, timestamp: int) -> dict | None:
 
 
 def get_history_safe(ytmusic):
-    response = ytmusic._send_request(
-        "browse",
-        {"browseId": "FEmusic_history"}
+    body = {"browseId": "FEmusic_history"}
+    body.update(ytmusic.context)
+
+    raw = ytmusic._session.post(
+        "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false",
+        json=body,
+        headers=ytmusic.headers,
+        timeout=30,
     )
+
+    print(
+        f"History HTTP status={raw.status_code} "
+        f"content_type={raw.headers.get('content-type', '')} "
+        f"bytes={len(raw.content)}"
+    )
+
+    if not raw.text.strip():
+        return []
+
+    try:
+        response = raw.json()
+    except Exception:
+        print(f"History response was not JSON; first bytes={raw.text[:120]!r}")
+        return []
 
     songs = []
 
