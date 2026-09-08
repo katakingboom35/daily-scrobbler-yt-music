@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from collections import Counter
@@ -164,8 +165,13 @@ def main():
     browser_json_raw = os.getenv("BROWSER_JSON")
     import_all = os.getenv("IMPORT_ALL_HISTORY", "0") == "1"
 
+    browser_headers = json.loads(browser_json_raw or "{}")
+    browser_headers.setdefault("x-youtube-bootstrap-logged-in", "true")
+    browser_headers.setdefault("referer", "https://music.youtube.com/")
+    browser_headers.setdefault("x-origin", "https://music.youtube.com")
+
     with open(browser_json_path, "w") as f:
-        f.write(browser_json_raw or "{}")
+        json.dump(browser_headers, f)
 
     ytmusic = ytmusicapi.YTMusic(browser_json_path, language="en")
 
