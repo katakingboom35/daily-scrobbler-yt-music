@@ -1,5 +1,6 @@
 import os
 import time
+from collections import Counter
 
 import pylast
 import ytmusicapi
@@ -77,6 +78,25 @@ def get_history_safe(ytmusic):
                 walk(value)
 
     walk(response)
+
+    if not songs:
+        renderer_counts = Counter()
+
+        def inspect(obj):
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    if key.endswith("Renderer") or key.endswith("ViewModel"):
+                        renderer_counts[key] += 1
+                    inspect(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    inspect(value)
+
+        inspect(response)
+        print("Renderer types in history response:")
+        for key, count in renderer_counts.most_common(25):
+            print(f"  {key}: {count}")
+
     return songs
 
 
